@@ -71,6 +71,8 @@ function fireAlert() {
   openExercise();
 }
 
+let trayIcon = null;
+
 // ── 체조 창 (투명, 항상 위) ──
 function openExercise() {
   if (exerciseWin && !exerciseWin.isDestroyed()) return;
@@ -147,9 +149,10 @@ app.whenReady().then(() => {
 
   loadSettings();
 
-  let icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png'));
-  icon = icon.resize({ width: 18, height: 18 });
-  tray = new Tray(icon);
+  // 요가 실루엣 템플릿 아이콘 (Mac이 라이트/다크 모드 색을 자동 전환)
+  trayIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png')); // 22px, @2x 자동 인식
+  trayIcon.setTemplateImage(true);
+  tray = new Tray(trayIcon);
   tray.setToolTip('Posture Buddy - 허리 펴기 알리미');
 
   const menu = Menu.buildFromTemplate([
