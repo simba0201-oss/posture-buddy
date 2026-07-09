@@ -1,0 +1,21 @@
+{
+  "name": "posture-buddy",
+  "version": "1.0.0",
+  "description": "허리 펴기 알림 + 체조 캐릭터",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.hj.posturebuddy",
+    "productName": "Posture Buddy",
+    "files": ["main.js", "preload.js", "settings.html", "exercise.html", "assets/**"],
+    "mac": { "target": "dmg", "icon": "build/icon.png" },
+    "win": { "target": "nsis", "icon": "build/icon.png" }
+  }
+}

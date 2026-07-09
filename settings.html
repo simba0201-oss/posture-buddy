@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Posture Buddy 설정</title>
+<style>
+  :root { --alpha: 0.85; } /* 카드 불투명도 (슬라이더로 조절) */
+  html, body { background: transparent; margin: 0; }
+  body {
+    font-family: -apple-system, 'Malgun Gothic', sans-serif;
+    color: #333; text-align: center; user-select: none;
+    padding: 10px;
+  }
+  .card {
+    -webkit-app-region: drag; /* 카드를 잡고 창 이동 */
+    background: rgba(255, 255, 255, var(--alpha));
+    border: 1px solid rgba(255,255,255,.4);
+    border-radius: 18px;
+    padding: 20px 22px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.15);
+    position: relative;
+  }
+  .card button, .card input, .card label { -webkit-app-region: no-drag; }
+  #close {
+    position: absolute; top: 10px; right: 12px;
+    border: none; background: none; font-size: 16px;
+    color: #999; cursor: pointer; padding: 4px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #777; margin-bottom: 18px; }
+  .intervals { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+  .intervals button {
+    flex: 1; padding: 10px 0; border: 1px solid #ccc; border-radius: 8px;
+    background: rgba(255,255,255,.75); font-size: 14px; cursor: pointer;
+  }
+  .intervals button.on { background: #4a7cff; color: #fff; border-color: #4a7cff; }
+  .custom { margin-bottom: 14px; font-size: 13px; }
+  .custom input { width: 60px; padding: 6px; border: 1px solid #ccc; border-radius: 6px; text-align: center; }
+  .row { font-size: 13px; margin-bottom: 14px; text-align: left; }
+  .row input[type="range"] { width: 100%; margin-top: 4px; }
+  #remain { font-size: 34px; font-weight: 700; margin: 6px 0 16px; font-variant-numeric: tabular-nums; }
+  #remain.off { color: #aaa; }
+  #toggle {
+    width: 100%; padding: 14px 0; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: 600; color: #fff; cursor: pointer;
+    background: #4a7cff;
+  }
+  #toggle.running { background: #e5484d; }
+</style>
+</head>
+<body>
+<div class="card">
+  <button id="close" title="닫기 (앱은 트레이에 유지)">✕</button>
+  <h1>🧘 Posture Buddy</h1>
+  <div class="sub">일정 시간마다 허리 펴기 알림</div>
+
+  <div class="intervals">
+    <button data-min="20">20분</button>
+    <button data-min="30" class="on">30분</button>
+    <button data-min="50">50분</button>
+  </div>
+  <div class="custom">
+    직접 입력: <input type="number" id="customMin" min="1" max="180" placeholder="분"> 분 (1~180)
+  </div>
+
+  <div class="row">
+    <label><input type="checkbox" id="autoLaunch"> 로그인할 때 자동 실행</label>
+  </div>
+  <div class="row">
+    창 투명도: <span id="alphaVal">85</span>%
+    <input type="range" id="alphaSlider" min="20" max="100" value="85">
+  </div>
+
+  <div id="remain" class="off">--:--</div>
+  <button id="toggle">시작</button>
+</div>
+
+<script>
+  let selectedMin = 30;
+  let running = false;
+
+  const buttons = document.querySelectorAll('.intervals button');
+  const customInput = document.getElementById('customMin');
+  const remainEl = document.getElementById('remain');
+  const toggleBtn = document.getElementById('toggle');
+  const autoEl = document.getElementById('autoLaunch');
+  const slider = document.getElementById('alphaSlider');
+  const alphaVal = document.getElementById('alphaVal');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      customInput.value = '';
+      selectedMin = Number(btn.dataset.min);
+    });
+  });
+
+  customInput.addEventListener('input', () => {
+    buttons.forEach(b => b.classList.remove('on'));
+    selectedMin = Number(customInput.value);
+  });
+
+  toggleBtn.addEventListener('click', async () => {
+    if (running) {
+      await window.api.stop();
+      setRunning(false);
+    } else {
+      const res = await window.api.start(selectedMin);
+      if (!res.ok) { alert('1~180 사이의 분을 입력하세요'); return; }
+      setRunning(true);
+    }
+  });
+
+  function setRunning(on) {
+    running = on;
+    toggleBtn.textContent = on ? '정지' : '시작';
+    toggleBtn.classList.toggle('running', on);
+    if (!on) { remainEl.textContent = '--:--'; remainEl.classList.add('off'); }
+  }
+
+  // 투명도 슬라이더
+  function applyAlpha(v) {
+    document.documentElement.style.setProperty('--alpha', v / 100);
+    alphaVal.textContent = v;
+  }
+  slider.addEventListener('input', () => {
+    applyAlpha(slider.value);
+    window.api.setOpacity(Number(slider.value)); // 설정에 저장
+  });
+
+  autoEl.addEventListener('change', () => window.api.setAutoLaunch(autoEl.checked));
+  document.getElementById('close').addEventListener('click', () => window.close());
+
+  // 1초마다 남은 시간 표시
+  window.api.onTick((ms) => {
+    if (ms === null) return;
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    remainEl.textContent = m + ':' + String(s).padStart(2, '0');
+    remainEl.classList.remove('off');
+  });
+
+  // 저장된 상태 복원
+  window.api.getState().then(st => {
+    if (st.running) setRunning(true);
+    autoEl.checked = st.autoLaunch;
+    selectedMin = st.intervalMinutes;
+    buttons.forEach(b => b.classList.toggle('on', Number(b.dataset.min) === st.intervalMinutes));
+    if (![20, 30, 50].includes(st.intervalMinutes)) customInput.value = st.intervalMinutes;
+    slider.value = st.panelOpacity;
+    applyAlpha(st.panelOpacity);
+  });
+</script>
+</body>
+</html>

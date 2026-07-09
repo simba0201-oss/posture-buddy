@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { background: transparent; margin: 0; overflow: hidden; }
+  body {
+    font-family: -apple-system, 'Malgun Gothic', sans-serif;
+    text-align: center; user-select: none;
+    -webkit-app-region: drag; /* 창을 드래그로 옮길 수 있게 */
+  }
+
+  /* 말풍선 */
+  .bubble {
+    display: inline-block; margin-top: 10px; padding: 10px 22px;
+    background: #fff; border-radius: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    font-size: 17px; font-weight: 700; color: #333;
+  }
+  #count { color: #4a7cff; font-variant-numeric: tabular-nums; }
+
+  svg { width: 300px; height: 360px; margin-top: 6px; }
+
+  #skip {
+    -webkit-app-region: no-drag; /* 버튼은 드래그 대신 클릭 */
+    margin-top: 8px; padding: 8px 26px;
+    border: none; border-radius: 16px;
+    background: rgba(80,80,80,.75); color: #fff;
+    font-size: 13px; cursor: pointer;
+  }
+
+  /* ── 체조 애니메이션 ── */
+  #head, #armL, #armR, #char { transform-box: fill-box; }
+  #head { transform-origin: 50% 95%; }
+  #armL { transform-origin: 90% 15%; }
+  #armR { transform-origin: 10% 15%; }
+  #char { transform-origin: 50% 100%; }
+
+  /* 1. 목 스트레칭: 고개 좌우로 천천히 */
+  .neck #head { animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-22deg); }
+    75% { transform: rotate(22deg); }
+  }
+
+  /* 2. 어깨 돌리기: 팔 크게 원 그리기 */
+  .shoulder #armL { animation: spinL 2s linear infinite; }
+  .shoulder #armR { animation: spinR 2s linear infinite; }
+  .shoulder #char { animation: bounce 1s ease-in-out infinite; }
+  @keyframes spinL { to { transform: rotate(-360deg); } }
+  @keyframes spinR { to { transform: rotate(360deg); } }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  /* 3. 허리 펴기: 팔 위로 쭉, 몸 늘리기 */
+  .back #armL { animation: raiseL 4s ease-in-out infinite; }
+  .back #armR { animation: raiseR 4s ease-in-out infinite; }
+  .back #char { animation: stretchUp 4s ease-in-out infinite; }
+  @keyframes raiseL { 0%,100% { transform: rotate(0); } 40%,60% { transform: rotate(-160deg); } }
+  @keyframes raiseR { 0%,100% { transform: rotate(0); } 40%,60% { transform: rotate(160deg); } }
+  @keyframes stretchUp { 0%,100% { transform: scaleY(1); } 40%,60% { transform: scaleY(1.07); } }
+</style>
+</head>
+<body>
+  <div class="bubble"><span id="phaseName">준비</span> · <span id="count">20</span>초</div>
+
+  <svg viewBox="0 0 200 240">
+    <g id="char">
+      <!-- 그림자 -->
+      <ellipse cx="100" cy="232" rx="46" ry="7" fill="rgba(0,0,0,.15)"/>
+      <!-- 다리 -->
+      <rect x="80" y="196" width="14" height="34" rx="7" fill="#5fb87a"/>
+      <rect x="106" y="196" width="14" height="34" rx="7" fill="#5fb87a"/>
+      <!-- 팔 (몸통보다 뒤에) -->
+      <g id="armL"><rect x="38" y="128" width="34" height="13" rx="6.5" fill="#6ecc8a"/></g>
+      <g id="armR"><rect x="128" y="128" width="34" height="13" rx="6.5" fill="#6ecc8a"/></g>
+      <!-- 몸통 -->
+      <rect x="62" y="118" width="76" height="86" rx="30" fill="#7ddd99"/>
+      <ellipse cx="100" cy="165" rx="24" ry="28" fill="#a8ecbc"/>
+      <!-- 머리 -->
+      <g id="head">
+        <circle cx="100" cy="72" r="48" fill="#7ddd99"/>
+        <circle cx="83" cy="66" r="6" fill="#2f4636"/>
+        <circle cx="117" cy="66" r="6" fill="#2f4636"/>
+        <circle cx="85" cy="64" r="2" fill="#fff"/>
+        <circle cx="119" cy="64" r="2" fill="#fff"/>
+        <path d="M86 88 Q100 100 114 88" stroke="#2f4636" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <circle cx="70" cy="80" r="7" fill="rgba(255,150,150,.45)"/>
+        <circle cx="130" cy="80" r="7" fill="rgba(255,150,150,.45)"/>
+      </g>
+    </g>
+  </svg>
+
+  <br>
+  <button id="skip">오늘은 건너뛰기</button>
+
+<script>
+  // ── 알림음: 딩동 차임 2번 (Web Audio - 파일 없이 코드로 소리 생성) ──
+  function chime() {
+    const ctx = new AudioContext();
+    [[880, 0], [660, 0.25], [880, 0.7], [660, 0.95]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.5);
+    });
+  }
+
+  // ── 체조 3단계: 각 20초 ──
+  const phases = [
+    { name: '목 스트레칭', cls: 'neck' },
+    { name: '어깨 돌리기', cls: 'shoulder' },
+    { name: '허리 펴기', cls: 'back' }
+  ];
+  const SEC = 20;
+  let idx = 0, remain = SEC;
+
+  const nameEl = document.getElementById('phaseName');
+  const countEl = document.getElementById('count');
+
+  function setPhase(i) {
+    document.body.className = phases[i].cls;
+    nameEl.textContent = phases[i].name;
+    remain = SEC;
+    countEl.textContent = remain;
+  }
+
+  const timer = setInterval(() => {
+    remain--;
+    countEl.textContent = remain;
+    if (remain <= 0) {
+      idx++;
+      if (idx >= phases.length) { finish(); return; }
+      setPhase(idx);
+    }
+  }, 1000);
+
+  function finish() {
+    clearInterval(timer);
+    nameEl.textContent = '수고했어요! 💪';
+    countEl.parentElement.innerHTML = '수고했어요! 💪';
+    setTimeout(() => window.api.closeExercise(), 1500);
+  }
+
+  document.getElementById('skip').addEventListener('click', () => {
+    clearInterval(timer);
+    window.api.closeExercise();
+  });
+
+  chime();
+  setPhase(0);
+</script>
+</body>
+</html>
