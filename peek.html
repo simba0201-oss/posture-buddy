@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  html, body { background: transparent; margin: 0; overflow: hidden; }
+  #girl { position: absolute; transition: transform .9s ease; -webkit-user-drag: none; }
+
+  /* 아래에서 빼꼼 */
+  body.bottom #girl { height: 360px; bottom: 0; left: 50%; transform: translate(-50%, 105%); }
+  body.bottom #girl.up { transform: translate(-50%, 0); }
+
+  /* 왼쪽에서 빼꼼 */
+  body.left #girl { width: 360px; left: 0; top: 50%; transform: translate(-105%, -50%); }
+  body.left #girl.up { transform: translate(0, -50%); }
+
+  /* 오른쪽에서 빼꼼 */
+  body.right #girl { width: 360px; right: 0; top: 50%; transform: translate(105%, -50%); }
+  body.right #girl.up { transform: translate(0, -50%); }
+
+  /* 왼쪽 아래 구석에서 대각선 빼꼼 */
+  body.corner-left #girl { width: 465px; left: 0; bottom: 0; transform: translate(-75%, 75%); }
+  body.corner-left #girl.up { transform: translate(-18%, 18%); }
+
+  /* 오른쪽 아래 구석 */
+  body.corner-right #girl { width: 465px; right: 0; bottom: 0; transform: translate(75%, 75%); }
+  body.corner-right #girl.up { transform: translate(18%, 18%); }
+</style>
+</head>
+<body>
+  <img id="girl" title="휴식도 잊지 마세요!">
+<script>
+  // main.js가 넘겨준 방향 (bottom / left / right)
+  const edge = new URLSearchParams(location.search).get('edge') || 'bottom';
+  document.body.className = edge;
+  const girl = document.getElementById('girl');
+  girl.src = 'assets/peek' + (edge === 'bottom' ? '' : '_' + edge) + '.png';
+
+  setTimeout(() => girl.classList.add('up'), 60);
+
+  let hiding = false;
+  function hide() {
+    if (hiding) return;
+    hiding = true;
+    girl.classList.remove('up');
+    setTimeout(() => window.api.closePeek(), 950);
+  }
+  setTimeout(hide, 4500);
+  document.addEventListener('click', hide);
+</script>
+</body>
+</html>

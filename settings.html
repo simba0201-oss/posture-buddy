@@ -20,7 +20,7 @@
     box-shadow: 0 6px 20px rgba(0,0,0,.15);
     position: relative;
   }
-  .card button, .card input, .card label { -webkit-app-region: no-drag; }
+  .card button, .card input, .card label, .card select { -webkit-app-region: no-drag; }
   #close {
     position: absolute; top: 10px; right: 12px;
     border: none; background: none; font-size: 16px;
@@ -65,6 +65,17 @@
 
   <div class="row">
     <label><input type="checkbox" id="autoLaunch"> 로그인할 때 자동 실행</label>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="peekOn"> 캐릭터 깜짝 등장 (빼꼼)</label>
+    <span style="margin-left: 8px;">간격:
+      <select id="peekMin">
+        <option value="10">10분</option>
+        <option value="20">20분</option>
+        <option value="30">30분</option>
+        <option value="60">1시간</option>
+      </select>
+    </span>
   </div>
   <div class="row">
     창 투명도: <span id="alphaVal">85</span>%
@@ -130,6 +141,16 @@
   });
 
   autoEl.addEventListener('change', () => window.api.setAutoLaunch(autoEl.checked));
+
+  // 빼꼼 설정
+  const peekOn = document.getElementById('peekOn');
+  const peekMin = document.getElementById('peekMin');
+  function sendPeek() {
+    peekMin.disabled = !peekOn.checked;
+    window.api.setPeek({ enabled: peekOn.checked, minutes: Number(peekMin.value) });
+  }
+  peekOn.addEventListener('change', sendPeek);
+  peekMin.addEventListener('change', sendPeek);
   document.getElementById('close').addEventListener('click', () => window.close());
 
   // 1초마다 남은 시간 표시
@@ -150,6 +171,10 @@
     if (![20, 30, 50].includes(st.intervalMinutes)) customInput.value = st.intervalMinutes;
     slider.value = st.panelOpacity;
     applyAlpha(st.panelOpacity);
+    peekOn.checked = st.peekEnabled;
+    const opt = [...peekMin.options].find(o => Number(o.value) === st.peekMinutes);
+    if (opt) peekMin.value = st.peekMinutes;
+    peekMin.disabled = !st.peekEnabled;
   });
 </script>
 </body>

@@ -11,26 +11,27 @@
   }
   .bubble {
     display: inline-block; margin-top: 10px; padding: 10px 20px;
-    max-width: 300px;
-    background: #fff; border-radius: 20px;
+    max-width: 440px;
+    background: #fff; border-radius: 24px;
     box-shadow: 0 4px 14px rgba(0,0,0,.18);
-    font-size: 15px; font-weight: 600; color: #333; line-height: 1.4;
+    font-size: 19px; font-weight: 600; color: #333; line-height: 1.4;
   }
   #count { color: #4a7cff; font-variant-numeric: tabular-nums; }
   /* 포즈 두 장을 겹쳐놓고 투명도로 부드럽게 전환 (크로스페이드) */
-  .stage { position: relative; height: 340px; margin-top: 8px; }
+  /* 창 높이에 맞춰 캐릭터가 늘어남 (100vh = 창 세로 전체) */
+  .stage { position: relative; height: calc(100vh - 185px); margin-top: 8px; }
   .stage img {
     position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    height: 340px; -webkit-user-drag: none;
+    height: calc(100vh - 185px); -webkit-user-drag: none;
     filter: drop-shadow(0 6px 10px rgba(0,0,0,.2));
     transition: opacity .8s ease;
   }
   #skip {
     -webkit-app-region: no-drag;
-    margin-top: 6px; padding: 8px 26px;
-    border: none; border-radius: 16px;
+    margin-top: 8px; padding: 10px 32px;
+    border: none; border-radius: 18px;
     background: rgba(80,80,80,.75); color: #fff;
-    font-size: 13px; cursor: pointer;
+    font-size: 15px; cursor: pointer;
   }
 </style>
 </head>
