@@ -10,20 +10,24 @@
     -webkit-app-region: drag;
   }
   .bubble {
-    display: inline-block; margin-top: 10px; padding: 10px 22px;
+    display: inline-block; margin-top: 10px; padding: 10px 20px;
+    max-width: 300px;
     background: #fff; border-radius: 20px;
     box-shadow: 0 4px 14px rgba(0,0,0,.18);
-    font-size: 17px; font-weight: 700; color: #333;
+    font-size: 15px; font-weight: 600; color: #333; line-height: 1.4;
   }
   #count { color: #4a7cff; font-variant-numeric: tabular-nums; }
-  #char {
-    height: 350px; margin-top: 6px;
-    -webkit-user-drag: none;
+  /* 포즈 두 장을 겹쳐놓고 투명도로 부드럽게 전환 (크로스페이드) */
+  .stage { position: relative; height: 340px; margin-top: 8px; }
+  .stage img {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    height: 340px; -webkit-user-drag: none;
     filter: drop-shadow(0 6px 10px rgba(0,0,0,.2));
+    transition: opacity .8s ease;
   }
   #skip {
     -webkit-app-region: no-drag;
-    margin-top: 8px; padding: 8px 26px;
+    margin-top: 6px; padding: 8px 26px;
     border: none; border-radius: 16px;
     background: rgba(80,80,80,.75); color: #fff;
     font-size: 13px; cursor: pointer;
@@ -31,72 +35,106 @@
 </style>
 </head>
 <body>
-  <div class="bubble"><span id="phaseName">준비</span> · <span id="count">20</span>초</div>
-  <br>
-  <img id="char" src="assets/neck1.png" alt="">
-  <br>
+  <div class="bubble"><span id="line">준비하세요</span> <span id="count"></span></div>
+  <div class="stage">
+    <img id="imgA" src="assets/neck1.png" style="opacity:1">
+    <img id="imgB" src="assets/neck2.png" style="opacity:0">
+  </div>
   <button id="skip">오늘은 건너뛰기</button>
 
 <script>
-  // ══ 운동별 포즈 프레임 (1초마다 교체) ══
-  const phases = [
-    { name: '목 스트레칭', frames: ['neck1', 'neck2'] },
-    { name: '어깨 돌리기', frames: ['shoulder1', 'shoulder2', 'shoulder3', 'shoulder4'] },
-    { name: '허리 펴기',   frames: ['back1', 'back2'] }
+  // ══ 요가 선생님 대본: 말 → 포즈 → 유지시간(초) ══
+  const script = [
+    { say: '목 스트레칭부터 시작할게요. 어깨에 힘을 빼세요.', pose: 'neck1', hold: 4 },
+    { say: '고개를 천천히 왼쪽으로 기울여 주세요.', pose: 'neck1', hold: 8 },
+    { say: '이제 반대쪽이에요. 오른쪽으로 천천히.', pose: 'neck2', hold: 8 },
+    { say: '한 번 더 왼쪽으로.', pose: 'neck1', hold: 6 },
+    { say: '오른쪽으로.', pose: 'neck2', hold: 6 },
+
+    { say: '다음은 어깨 돌리기예요. 손끝을 어깨에 올려 주세요.', pose: 'shoulder1', hold: 4 },
+    { say: '팔꿈치로 크게 원을 그리면서 천천히 돌립니다.', pose: 'shoulder2', hold: 3 },
+    { pose: 'shoulder3', hold: 3 },
+    { pose: 'shoulder4', hold: 3 },
+    { pose: 'shoulder1', hold: 3 },
+    { say: '반대 방향으로도 돌려 볼게요.', pose: 'shoulder4', hold: 3 },
+    { pose: 'shoulder3', hold: 3 },
+    { pose: 'shoulder2', hold: 3 },
+    { pose: 'shoulder1', hold: 3 },
+
+    { say: '마지막은 허리 펴기입니다. 숨을 들이마시며 두 팔을 하늘로 쭉 뻗으세요.', pose: 'back1', hold: 8 },
+    { say: '숨을 내쉬면서 팔을 천천히 내립니다.', pose: 'back2', hold: 6 },
+    { say: '한 번 더, 쭉 뻗어 올리고요.', pose: 'back1', hold: 8 },
+    { say: '잘하셨어요. 오늘도 개운하게 보내세요!', pose: 'back2', hold: 4 }
   ];
-  // 프레임 미리 로드 (교체 시 깜빡임 방지)
-  phases.flatMap(p => p.frames).forEach(n => { new Image().src = 'assets/' + n + '.png'; });
 
-  const SEC = 20, FRAME_MS = 1000;
-  let idx = 0, remain = SEC, frameIdx = 0;
+  // 이미지 미리 로드
+  [...new Set(script.map(s => s.pose))].forEach(n => { new Image().src = 'assets/' + n + '.png'; });
 
-  const charEl = document.getElementById('char');
-  const nameEl = document.getElementById('phaseName');
-  const countEl = document.getElementById('count');
-
-  function setPhase(i) {
-    nameEl.textContent = phases[i].name;
-    remain = SEC;
-    countEl.textContent = remain;
-    frameIdx = 0;
+  // ══ 음성: 컴퓨터에 내장된 한국어 목소리 사용 ══
+  function say(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 0.95;
+    // 목소리 우선순위: 유나(Mac 고품질) > Heami(Windows) > 아무 한국어
+    const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('ko'));
+    const ko = voices.find(v => /yuna|유나/i.test(v.name))
+            || voices.find(v => /heami/i.test(v.name))
+            || voices[0];
+    if (ko) u.voice = ko;
+    speechSynthesis.speak(u);
   }
 
-  const framer = setInterval(() => {
-    const f = phases[idx].frames;
-    charEl.src = 'assets/' + f[frameIdx % f.length] + '.png';
-    frameIdx++;
-  }, FRAME_MS);
+  // ══ 크로스페이드 포즈 전환 ══
+  const imgA = document.getElementById('imgA');
+  const imgB = document.getElementById('imgB');
+  let frontIsA = true;
+  function setPose(name) {
+    const front = frontIsA ? imgA : imgB;
+    const back = frontIsA ? imgB : imgA;
+    if (front.src.includes(name + '.png')) return;
+    back.src = 'assets/' + name + '.png';
+    back.style.opacity = 1;
+    front.style.opacity = 0;
+    frontIsA = !frontIsA;
+  }
 
-  const timer = setInterval(() => {
-    remain--;
-    countEl.textContent = remain;
-    if (remain <= 0) {
-      idx++;
-      if (idx >= phases.length) { finish(); return; }
-      setPhase(idx);
+  // ══ 수업 진행 ══
+  const lineEl = document.getElementById('line');
+  const countEl = document.getElementById('count');
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let stopped = false;
+
+  async function run() {
+    await sleep(600); // 음성 목록 로드 대기
+    for (const step of script) {
+      if (stopped) return;
+      if (step.say) { lineEl.textContent = step.say; say(step.say); }
+      setPose(step.pose);
+      for (let s = step.hold; s > 0; s--) {
+        if (stopped) return;
+        countEl.textContent = s;
+        await sleep(1000);
+      }
     }
-  }, 1000);
-
-  function finish() {
-    clearInterval(timer);
-    clearInterval(framer);
-    document.querySelector('.bubble').textContent = '수고했어요! 💪';
-    setTimeout(() => window.api.closeExercise(), 1500);
+    countEl.textContent = '';
+    lineEl.textContent = '수고했어요! 💪';
+    await sleep(1800);
+    window.api.closeExercise();
   }
 
   document.getElementById('skip').addEventListener('click', () => {
-    clearInterval(timer);
-    clearInterval(framer);
+    stopped = true;
+    speechSynthesis.cancel();
     window.api.closeExercise();
   });
 
   function chime() {
     const ctx = new AudioContext();
-    [[880, 0], [660, 0.25], [880, 0.7], [660, 0.95]].forEach(([freq, delay]) => {
+    [[880, 0], [660, 0.25]].forEach(([freq, delay]) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + delay);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.5);
       osc.connect(gain).connect(ctx.destination);
       osc.start(ctx.currentTime + delay);
@@ -105,7 +143,7 @@
   }
 
   chime();
-  setPhase(0);
+  run();
 </script>
 </body>
 </html>

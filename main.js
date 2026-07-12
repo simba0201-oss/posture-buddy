@@ -72,6 +72,18 @@ function fireAlert() {
 }
 
 let trayIcon = null;
+let spinFrames = [], spinTimer = null, spinIdx = 0;
+
+// 체조 시간 동안 발레리나 피루엣 회전
+function startTraySpin() {
+  if (spinTimer || spinFrames.length === 0) return;
+  spinTimer = setInterval(() => tray.setImage(spinFrames[spinIdx++ % spinFrames.length]), 500);
+}
+function stopTraySpin() {
+  clearInterval(spinTimer);
+  spinTimer = null;
+  tray.setImage(trayIcon);
+}
 
 // ── 체조 창 (투명, 항상 위) ──
 function openExercise() {
@@ -90,6 +102,8 @@ function openExercise() {
   });
   exerciseWin.center();
   exerciseWin.loadFile('exercise.html');
+  startTraySpin();
+  exerciseWin.on('closed', stopTraySpin);
 }
 
 // ── 설정 창 ──
@@ -150,8 +164,13 @@ app.whenReady().then(() => {
   loadSettings();
 
   // 요가 실루엣 템플릿 아이콘 (Mac이 라이트/다크 모드 색을 자동 전환)
-  trayIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'trayTemplate.png')); // 22px, @2x 자동 인식
+  trayIcon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'yogaframe_0.png')); // 요가 차렷 자세, @2x 자동 인식
   trayIcon.setTemplateImage(true);
+  for (let i = 0; i < 8; i++) {
+    const f = nativeImage.createFromPath(path.join(__dirname, 'assets', `yogaframe_${i}.png`));
+    f.setTemplateImage(true);
+    spinFrames.push(f);
+  }
   tray = new Tray(trayIcon);
   tray.setToolTip('Posture Buddy - 허리 펴기 알리미');
 
