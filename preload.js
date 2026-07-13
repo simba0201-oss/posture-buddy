@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('api', {
   setAutoLaunch: (on) => ipcRenderer.invoke('set-autolaunch', on),
   setOpacity: (v) => ipcRenderer.invoke('set-opacity', v),
   closePeek: () => ipcRenderer.invoke('close-peek'),
-  setPeek: (opt) => ipcRenderer.invoke('set-peek', opt)
+  setPeek: (opt) => ipcRenderer.invoke('set-peek', opt),
+  setGender: (v) => ipcRenderer.invoke('set-gender', v)
 });

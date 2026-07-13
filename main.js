@@ -9,7 +9,7 @@ let exerciseWin = null;
 
 // ── 설정 저장/불러오기 (앱 전용 폴더에 settings.json으로 기억) ──
 const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json');
-let settings = { intervalMinutes: 30, running: false, autoLaunch: false, panelOpacity: 85, peekEnabled: true, peekMinutes: 20 };
+let settings = { intervalMinutes: 30, running: false, autoLaunch: false, panelOpacity: 85, peekEnabled: true, peekMinutes: 20, gender: 'f' };
 
 function loadSettings() {
   try {
@@ -105,20 +105,20 @@ function openPeek() {
     schedulePeek();
     return;
   }
-  const area = screen.getPrimaryDisplay().workArea; // 독/작업표시줄 제외한 화면 영역
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea; // 마우스가 있는 화면 기준
   const edge = ['bottom', 'left', 'right', 'corner-left', 'corner-right'][Math.floor(Math.random() * 5)]; // 방향 랜덤 (위쪽은 없음)
   let W, H, x, y;
   if (edge === 'bottom') {
-    W = 320; H = 380;
+    W = 340; H = 430; // 말풍선 공간 포함
     x = area.x + Math.floor(Math.random() * (area.width - W));
     y = area.y + area.height - H;
   } else if (edge === 'left' || edge === 'right') {
-    W = 380; H = 320;
+    W = 420; H = 420;
     y = area.y + Math.floor(Math.random() * (area.height - H));
     x = edge === 'left' ? area.x : area.x + area.width - W;
   } else {
     // 아래 구석: 화면 모서리에 딱 붙임
-    W = 400; H = 400;
+    W = 480; H = 520;
     y = area.y + area.height - H;
     x = edge === 'corner-left' ? area.x : area.x + area.width - W;
   }
@@ -199,6 +199,10 @@ ipcMain.handle('close-exercise', () => {
   if (exerciseWin && !exerciseWin.isDestroyed()) exerciseWin.close();
   return { ok: true };
 });
+ipcMain.handle('set-gender', (e, v) => {
+  if (v === 'f' || v === 'm') { settings.gender = v; saveSettings(); } // 입력 검증
+  return { ok: true };
+});
 ipcMain.handle('set-peek', (e, opt) => {
   settings.peekEnabled = !!opt.enabled;
   const m = Number(opt.minutes);
@@ -222,6 +226,7 @@ ipcMain.handle('get-state', () => ({
   panelOpacity: settings.panelOpacity,
   peekEnabled: settings.peekEnabled,
   peekMinutes: settings.peekMinutes,
+  gender: settings.gender,
   remainMs: targetTime ? Math.max(0, targetTime - Date.now()) : null
 }));
 ipcMain.handle('set-autolaunch', (e, on) => {

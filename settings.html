@@ -67,6 +67,11 @@
     <label><input type="checkbox" id="autoLaunch"> 로그인할 때 자동 실행</label>
   </div>
   <div class="row">
+    캐릭터:
+    <label><input type="radio" name="gender" value="f" checked> 여자</label>
+    <label style="margin-left:10px;"><input type="radio" name="gender" value="m"> 남자</label>
+  </div>
+  <div class="row">
     <label><input type="checkbox" id="peekOn"> 캐릭터 깜짝 등장 (빼꼼)</label>
     <span style="margin-left: 8px;">간격:
       <select id="peekMin">
@@ -142,6 +147,10 @@
 
   autoEl.addEventListener('change', () => window.api.setAutoLaunch(autoEl.checked));
 
+  // 성별 선택
+  document.querySelectorAll('input[name=gender]').forEach(r =>
+    r.addEventListener('change', () => window.api.setGender(r.value)));
+
   // 빼꼼 설정
   const peekOn = document.getElementById('peekOn');
   const peekMin = document.getElementById('peekMin');
@@ -175,6 +184,8 @@
     const opt = [...peekMin.options].find(o => Number(o.value) === st.peekMinutes);
     if (opt) peekMin.value = st.peekMinutes;
     peekMin.disabled = !st.peekEnabled;
+    const gr = document.querySelector('input[name=gender][value="' + (st.gender || 'f') + '"]');
+    if (gr) gr.checked = true;
   });
 </script>
 </body>

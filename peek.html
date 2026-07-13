@@ -4,49 +4,93 @@
 <meta charset="UTF-8">
 <style>
   html, body { background: transparent; margin: 0; overflow: hidden; }
-  #girl { position: absolute; transition: transform .9s ease; -webkit-user-drag: none; }
+  body { font-family: -apple-system, 'Malgun Gothic', sans-serif; }
 
-  /* 아래에서 빼꼼 */
-  body.bottom #girl { height: 360px; bottom: 0; left: 50%; transform: translate(-50%, 105%); }
-  body.bottom #girl.up { transform: translate(-50%, 0); }
+  /* 말풍선 */
+  #bubble {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%) scale(0);
+    padding: 8px 18px; background: #fff; border-radius: 18px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.2);
+    font-size: 17px; font-weight: 700; color: #333; white-space: nowrap;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    z-index: 2;
+  }
+  #bubble.show { transform: translateX(-50%) scale(1); }
 
-  /* 왼쪽에서 빼꼼 */
-  body.left #girl { width: 360px; left: 0; top: 50%; transform: translate(-105%, -50%); }
-  body.left #girl.up { transform: translate(0, -50%); }
+  /* 캐릭터 (wrap이 슬라이드 담당, img가 회전 담당) */
+  #wrap { position: absolute; transition: transform .9s ease; }
+  #girl {
+    position: absolute; left: 50%; top: 50%;
+    width: 297px; height: 360px;
+    -webkit-user-drag: none;
+  }
 
-  /* 오른쪽에서 빼꼼 */
-  body.right #girl { width: 360px; right: 0; top: 50%; transform: translate(105%, -50%); }
-  body.right #girl.up { transform: translate(0, -50%); }
+  body.bottom #wrap { width: 297px; height: 360px; left: 50%; bottom: 0; margin-left: -149px; transform: translateY(105%); }
+  body.bottom #wrap.up { transform: translateY(0); }
+  body.bottom #girl { transform: translate(-50%, -50%); }
 
-  /* 왼쪽 아래 구석에서 대각선 빼꼼 */
-  body.corner-left #girl { width: 465px; left: 0; bottom: 0; transform: translate(-75%, 75%); }
-  body.corner-left #girl.up { transform: translate(-18%, 18%); }
+  body.left #wrap { width: 360px; height: 297px; left: 0; top: 50%; margin-top: -149px; transform: translateX(-105%); }
+  body.left #wrap.up { transform: translateX(0); }
+  body.left #girl { transform: translate(-50%, -50%) rotate(90deg); }
 
-  /* 오른쪽 아래 구석 */
-  body.corner-right #girl { width: 465px; right: 0; bottom: 0; transform: translate(75%, 75%); }
-  body.corner-right #girl.up { transform: translate(18%, 18%); }
+  body.right #wrap { width: 360px; height: 297px; right: 0; top: 50%; margin-top: -149px; transform: translateX(105%); }
+  body.right #wrap.up { transform: translateX(0); }
+  body.right #girl { transform: translate(-50%, -50%) rotate(-90deg); }
+
+  body.corner-left #wrap { width: 465px; height: 465px; left: 0; bottom: 0; transform: translate(-75%, 75%); }
+  body.corner-left #wrap.up { transform: translate(-18%, 18%); }
+  body.corner-left #girl { transform: translate(-50%, -50%) rotate(45deg); }
+
+  body.corner-right #wrap { width: 465px; height: 465px; right: 0; bottom: 0; transform: translate(75%, 75%); }
+  body.corner-right #wrap.up { transform: translate(18%, 18%); }
+  body.corner-right #girl { transform: translate(-50%, -50%) rotate(-45deg); }
 </style>
 </head>
 <body>
-  <img id="girl" title="휴식도 잊지 마세요!">
+  <div id="bubble"></div>
+  <div id="wrap"><img id="girl"></div>
 <script>
-  // main.js가 넘겨준 방향 (bottom / left / right)
   const edge = new URLSearchParams(location.search).get('edge') || 'bottom';
   document.body.className = edge;
+  const wrap = document.getElementById('wrap');
   const girl = document.getElementById('girl');
-  girl.src = 'assets/peek' + (edge === 'bottom' ? '' : '_' + edge) + '.png';
+  const bubble = document.getElementById('bubble');
+  const LINES = ['허리 펴', '허리 펴자', '허리 펴세요'];
 
-  setTimeout(() => girl.classList.add('up'), 60);
+  let g = 'f'; // 성별 접두사 (설정에서 읽음)
+  const src = (kind) => 'assets/' + g + '_peek' + (kind ? '_' + kind : '') + '.png';
 
   let hiding = false;
+
+  async function start() {
+    const st = await window.api.getState();
+    g = st.gender || 'f';
+    girl.src = src('');
+    girl.onerror = () => { g = 'f'; girl.src = src(''); }; // 남자 이미지 없으면 여자로 대체
+
+    setTimeout(() => wrap.classList.add('up'), 60);   // 스르륵 등장
+    setTimeout(talk, 1100);                            // 올라온 뒤 한마디
+    setTimeout(hide, 6000);                            // 퇴장
+  }
+
+  // 말풍선
+  function talk() {
+    if (hiding) return;
+    bubble.textContent = LINES[Math.floor(Math.random() * LINES.length)];
+    bubble.classList.add('show');
+    setTimeout(() => bubble.classList.remove('show'), 2800);
+  }
+
   function hide() {
     if (hiding) return;
     hiding = true;
-    girl.classList.remove('up');
+    bubble.classList.remove('show');
+    wrap.classList.remove('up');
     setTimeout(() => window.api.closePeek(), 950);
   }
-  setTimeout(hide, 4500);
   document.addEventListener('click', hide);
+
+  start();
 </script>
 </body>
 </html>

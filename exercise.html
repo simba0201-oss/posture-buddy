@@ -45,7 +45,8 @@
 
 <script>
   // ══ 요가 선생님 대본: 말 → 포즈 → 유지시간(초) ══
-  const script = [
+  const scripts = {};
+  scripts.f = [
     { say: '목 스트레칭부터 시작할게요. 어깨에 힘을 빼세요.', pose: 'neck1', hold: 4 },
     { say: '고개를 천천히 왼쪽으로 기울여 주세요.', pose: 'neck1', hold: 8 },
     { say: '이제 반대쪽이에요. 오른쪽으로 천천히.', pose: 'neck2', hold: 8 },
@@ -67,20 +68,46 @@
     { say: '한 번 더, 쭉 뻗어 올리고요.', pose: 'back1', hold: 8 },
     { say: '잘하셨어요. 오늘도 개운하게 보내세요!', pose: 'back2', hold: 4 }
   ];
+  scripts.m = [
+    { say: '목 스트레칭부터 시작할게요. 어깨에 힘을 빼세요.', pose: 'shoulder1', hold: 4 },
+    { say: '고개를 천천히 왼쪽으로 기울여 주세요.', pose: 'neck1', hold: 8 },
+    { say: '이제 반대쪽이에요. 오른쪽으로 천천히.', pose: 'neck2', hold: 8 },
+    { say: '한 번 더 왼쪽으로.', pose: 'neck1', hold: 6 },
+    { say: '오른쪽으로.', pose: 'neck2', hold: 6 },
 
-  // 이미지 미리 로드
-  [...new Set(script.map(s => s.pose))].forEach(n => { new Image().src = 'assets/' + n + '.png'; });
+    { say: '다음은 어깨 스트레칭이에요. 바르게 서 주세요.', pose: 'shoulder1', hold: 3 },
+    { say: '한쪽 팔을 가슴 앞으로 가로질러 당겨 주세요.', pose: 'shoulder2', hold: 7 },
+    { say: '반대쪽 팔도 똑같이 당겨 볼게요.', pose: 'shoulder3', hold: 7 },
+    { say: '양손을 머리 뒤로 보내고 팔꿈치를 활짝 열어 주세요.', pose: 'shoulder4', hold: 7 },
+    { say: '팔을 옆으로 쭉 뻗어 어깨를 활짝 폅니다.', pose: 'shoulder5', hold: 6 },
+
+    { say: '마지막은 허리 펴기입니다. 숨을 들이마시며 두 팔을 하늘로 쭉 뻗으세요.', pose: 'back1', hold: 8 },
+    { say: '숨을 내쉬면서 팔을 천천히 내립니다.', pose: 'back2', hold: 6 },
+    { say: '한 번 더, 쭉 뻗어 올리고요.', pose: 'back1', hold: 8 },
+    { say: '잘하셨어요. 오늘도 개운하게 보내세요!', pose: 'back2', hold: 4 }
+  ];
+  let script = scripts.f;
+
+  let g = 'f'; // 성별 접두사 (run()에서 설정을 읽어 갱신)
+  const poseSrc = (n) => 'assets/' + g + '_' + n + '.png';
 
   // ══ 음성: 컴퓨터에 내장된 한국어 목소리 사용 ══
   function say(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ko-KR';
     u.rate = 0.95;
-    // 목소리 우선순위: 유나(Mac 고품질) > Heami(Windows) > 아무 한국어
     const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('ko'));
-    const ko = voices.find(v => /yuna|유나/i.test(v.name))
-            || voices.find(v => /heami/i.test(v.name))
-            || voices[0];
+    let ko;
+    if (g === 'm') {
+      // 남성 한국어 음성 (Windows: InJoon 등). 없으면 톤을 낮춰 남성처럼
+      ko = voices.find(v => /injoon|minsu|male|남/i.test(v.name));
+      if (!ko) { u.pitch = 0.5; }
+    }
+    if (!ko) {
+      ko = voices.find(v => /yuna|유나/i.test(v.name))
+        || voices.find(v => /heami/i.test(v.name))
+        || voices[0];
+    }
     if (ko) u.voice = ko;
     speechSynthesis.speak(u);
   }
@@ -92,8 +119,9 @@
   function setPose(name) {
     const front = frontIsA ? imgA : imgB;
     const back = frontIsA ? imgB : imgA;
-    if (front.src.includes(name + '.png')) return;
-    back.src = 'assets/' + name + '.png';
+    if (front.src.includes(g + '_' + name + '.png')) return;
+    back.src = poseSrc(name);
+    back.onerror = () => { g = 'f'; back.src = poseSrc(name); }; // 남자 이미지 없으면 여자로
     back.style.opacity = 1;
     front.style.opacity = 0;
     frontIsA = !frontIsA;
@@ -106,6 +134,13 @@
   let stopped = false;
 
   async function run() {
+    const st = await window.api.getState();
+    g = st.gender || 'f';
+    script = scripts[g] || scripts.f;
+    imgA.src = poseSrc('neck1');
+    imgB.src = poseSrc('neck2');
+    // 이미지 미리 로드 (교체 시 깜빡임 방지)
+    [...new Set(script.map(s => s.pose))].forEach(n => { new Image().src = poseSrc(n); });
     await sleep(600); // 음성 목록 로드 대기
     for (const step of script) {
       if (stopped) return;
