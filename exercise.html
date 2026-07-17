@@ -91,8 +91,19 @@
   let g = 'f'; // 성별 접두사 (run()에서 설정을 읽어 갱신)
   const poseSrc = (n) => 'assets/' + g + '_' + n + '.png';
 
-  // ══ 음성: 컴퓨터에 내장된 한국어 목소리 사용 ══
+  // ══ 음성: 녹음 파일(assets/voice_성별/NN.mp3)이 있으면 재생, 없으면 내장 음성 ══
+  let sayIdx = 0;
   function say(text) {
+    sayIdx++;
+    const n = String(sayIdx).padStart(2, '0');
+    const audio = new Audio('assets/voice_' + g + '/' + n + '.mp3');
+    let fell = false;
+    const fallback = () => { if (!fell) { fell = true; speak(text); } };
+    audio.onerror = fallback;
+    audio.play().catch(fallback);
+  }
+
+  function speak(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ko-KR';
     u.rate = 0.95;
